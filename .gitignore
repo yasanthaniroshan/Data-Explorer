@@ -8,3 +8,4 @@ __pycache__/
 *.cfg
 *.log
 lib64
+Logs/
