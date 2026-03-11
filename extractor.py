@@ -28,7 +28,7 @@ DATASET_PATH = "/home/intellisense01/EML-Labs/datasets/iridia-af-records-v1.0.1"
 RECORDS = os.listdir(DATASET_PATH)
 SAMPLING_RATE = 200
 ECG_LABEL_PATTERN = "ecg_labels"
-OUTPUT_PATH = "/home/intellisense01/EML-Labs/datasets/Data-Explorer/processed_data_60min_nsr_5min_af"
+OUTPUT_PATH = "/home/intellisense01/EML-Labs/datasets/Data-Explorer/processed_data_60min_nsr_5min_af_corrected"
 WINDOW_SIZE = 200 # Number of RR intervals per window for feature extraction
 STRIDE = 20 # Stride for sliding window (number of RR intervals to move for the next window)
 EXPORTED_CSV = f"{WINDOW_SIZE}x{STRIDE}_extracted_rr_intervals.csv"
@@ -148,25 +148,33 @@ def alpha_1(rr_intervals):
     alpha_1_, _ = nk.complexity_dfa(rr_intervals, order=1)
     return alpha_1_
 
-def find_time_to_event(segments:list):
+def find_time_to_event(segments: list, stride: int):
     time_so_far = 0
     event_times = []
-    for segment in segments[::-1]: # Reverse order to calculate time to event from the end of the segment
-        time_of_window = sum(segment) # Assuming segment is in seconds, sum gives total time of the window
+
+    # last segment
+    # time_so_far += sum(segments[-1])
+    event_times.append(time_so_far)
+
+    # iterate backwards excluding last
+    for segment in reversed(segments[:-1]):
+        time_of_window = sum(segment[:stride])
         time_so_far += time_of_window
         event_times.append(time_so_far)
-    return event_times[::-1] # Reverse back to original order
+
+    return event_times[::-1]
 
 def create_df(nsr_rr_intervals, event_times, afib_rr_intervals, patient_id, episode_id):
     """Create a DataFrame with extracted features for each segment."""
     
     rows = []
+    id = 0
 
     for idx, segment in enumerate(nsr_rr_intervals):
         rows.append({
             'patient_id': patient_id,
             'episode_id': episode_id,
-            'segment_id': idx,
+            'segment_id': id,
             'EventType': 'NSR',
             'Event': 1,
             'TimeToEvent': event_times[idx],
@@ -177,15 +185,16 @@ def create_df(nsr_rr_intervals, event_times, afib_rr_intervals, patient_id, epis
             'sample_entropy': sample_entropy(segment),
             'approximate_entropy': approximate_entropy(segment)
         })
+        id += 1
 
     for idx, segment in enumerate(afib_rr_intervals):
         rows.append({
             'patient_id': patient_id,
             'episode_id': episode_id,
-            'segment_id': idx,
+            'segment_id': id,
             'EventType': 'AFib',
             'Event': 1,
-            'TimeToEvent': event_times[idx],
+            'TimeToEvent': 0, # AFib segments are at the event time
             'RMSSD': RMSSD(segment),
             'pNN50': pNN50(segment),
             'SDNN': SDNN(segment),
@@ -193,6 +202,7 @@ def create_df(nsr_rr_intervals, event_times, afib_rr_intervals, patient_id, epis
             'sample_entropy': sample_entropy(segment),
             'approximate_entropy': approximate_entropy(segment)
         })
+        id += 1
 
     df = pd.DataFrame(rows, columns=CSV_HEADERS)
     return df
@@ -242,7 +252,7 @@ def extract_and_save_ecg_data(record_name, record_path, row, ecg_h5_files,idx):
         
         nsr_rr_segements = segment_ecg_data(nsr_rr_intervals, window_size=WINDOW_SIZE, stride=STRIDE)
         afib_rr_segements = segment_ecg_data(afib_rr_intervals, window_size=WINDOW_SIZE, stride=STRIDE)
-        event_times = find_time_to_event(nsr_rr_segements)
+        event_times = find_time_to_event(nsr_rr_segements, stride=STRIDE)
         df = create_df(nsr_rr_segements,event_times,afib_rr_segements,record_name, f"{idx}")
         
         # Create output directory
@@ -251,11 +261,7 @@ def extract_and_save_ecg_data(record_name, record_path, row, ecg_h5_files,idx):
             output_filename = f"{record_name}_{idx}_{i}.npy"
             output_filepath = os.path.join(OUTPUT_PATH, output_filename)
             np.save(output_filepath, segment)
-        # # Save ECG segment as .npy file
-        # # output_filename = f"{record_name}_af{af_duration:.0f}s_nsr{nsr_duration:.0f}s_rr.npy"
-        # output_filepath = os.path.join(OUTPUT_PATH, output_filename)
-        
-        # np.save(output_filepath, rr_intervals)
+
         
         return df
     
