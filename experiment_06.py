@@ -10,7 +10,7 @@ np.random.seed(43)
 
 file_name = os.path.splitext(os.path.basename(__file__))[0]
 
-DATA_DIR = os.path.join('/home','intellisense01','EML-Labs','datasets','Data-Explorer','processed_data_60min_nsr_5min_af_corrected')
+DATA_DIR = os.path.join(os.getcwd(), 'processed_data_60min_nsr_5min_af')
 csv_file_name = '200x20_extracted_rr_intervals.csv'
 csv_path = os.path.join(DATA_DIR, csv_file_name)
 EXPORT_DIR = os.path.join(os.getcwd(), 'exported_plots', file_name)
@@ -22,7 +22,7 @@ patients = df['patient_id'].unique()
 patient = np.random.choice(patients, size=1, replace=False)[0]
 episodes = df[df['patient_id'] == patient]['episode_id'].unique()
 episode = np.random.choice(episodes, size=1, replace=False)[0]
-segments = df[(df['patient_id'] == patient) & (df['episode_id'] == episode)].sort_values(by='TimeToEvent')
+segments = df[(df['patient_id'] == patient) & (df['episode_id'] == episode) & (df['TimeToEvent'] > 0)].sort_values(by='TimeToEvent')
 
 time_to_event = segments['TimeToEvent'].values/60 # Convert to minutes
 rmssd_values = segments['RMSSD'].values

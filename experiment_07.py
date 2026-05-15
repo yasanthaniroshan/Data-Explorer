@@ -6,7 +6,7 @@ import seaborn as sns
 
 file_name = os.path.splitext(os.path.basename(__file__))[0]
 
-DATA_DIR = os.path.join('/home','intellisense01','EML-Labs','datasets','Data-Explorer','processed_data_60min_nsr_5min_af_corrected')
+DATA_DIR = os.path.join(os.getcwd(), 'processed_data_60min_nsr_5min_af')
 csv_file_name = '200x20_extracted_rr_intervals.csv'
 csv_path = os.path.join(DATA_DIR, csv_file_name)
 EXPORT_DIR = os.path.join(os.getcwd(), 'exported_plots', file_name)
@@ -45,8 +45,8 @@ def align_series(time_values, feature_values, common_time):
 for patient in patients:
     episodes = df[df['patient_id'] == patient]['episode_id'].unique()
     for episode in episodes:
-        segments = df[(df['patient_id'] == patient) & (df['episode_id'] == episode)]
-        episode_data = df[(df['patient_id'] == patient) & (df['episode_id'] == episode)].sort_values(by='TimeToEvent')[FEATURES]
+        segments = df[(df['patient_id'] == patient) & (df['episode_id'] == episode) & (df['TimeToEvent'] > 0)]
+        episode_data = df[(df['patient_id'] == patient) & (df['episode_id'] == episode) & (df['TimeToEvent'] > 0)].sort_values(by='TimeToEvent')[FEATURES]
         RMSSD_values.append(episode_data['RMSSD'].values)
         pNN50_values.append(episode_data['pNN50'].values)
         SDNN_values.append(episode_data['SDNN'].values)

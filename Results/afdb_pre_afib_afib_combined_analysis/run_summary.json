@@ -1,0 +1,18 @@
+{
+  "n_episodes": 274,
+  "rows": 4932,
+  "segment_types": [
+    "pre_afib",
+    "afib",
+    "both"
+  ],
+  "horizons_min": [
+    10,
+    20,
+    30,
+    60,
+    120,
+    180
+  ],
+  "output_dir": "/home/intellisense01/EML-Labs/datasets/Data-Explorer/Results/afdb_pre_afib_afib_combined_analysis"
+}
